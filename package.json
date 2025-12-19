@@ -5,5 +5,12 @@
   "main": "index.ts",
   "repository": "git@github.com:Lagaxyy/CG-conway-js.git",
   "author": "Lagaxyy <99192098+Lagaxyy@users.noreply.github.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "eslint": "^9.39.2",
+    "prettier": "^3.7.4",
+    "prettier-eslint": "^16.4.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.50.0"
+  }
 }
