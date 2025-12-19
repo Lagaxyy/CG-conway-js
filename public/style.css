@@ -1,5 +1,5 @@
 :root {
-    --app-width: 100%;
+    --app-width: 1600px;
     --app-height: 800px;
 }
 
@@ -7,7 +7,8 @@ body {
     margin: 0;
     padding: 0;
     color: black;
-    background-color: rgba(255, 255, 255, 0.87);
+    /* background-color: rgba(255, 255, 255, 0.87); */
+    background-color: #A9A9A9;
 }
 
 #app {
