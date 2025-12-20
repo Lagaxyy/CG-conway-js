@@ -1,5 +1,13 @@
-import { createApp } from "./interface/interface";
+import * as INTERFACE from "./interface/interface";
 
-(async () => {
-  await createApp();
-})();
+const asyncScript = async () => {
+  await INTERFACE.createApp();
+
+  INTERFACE.showInfo();
+
+  INTERFACE.addCellByIndex(5);
+  INTERFACE.addCellByIndex(2047);
+  INTERFACE.renderCells();
+};
+
+asyncScript();
