@@ -4,11 +4,13 @@ import {
   Graphics,
   GraphicsContext,
   Renderer,
+  Ticker,
 } from "pixi.js";
 
 /* TS */
 
 type CELL_STATE = "alive" | "dead";
+type ANIMATION_ACTION = "start" | "stop" | "destroy";
 
 interface Cell {
   index: number;
@@ -36,8 +38,20 @@ const FRAMES = {
   },
 };
 const LABEL_MAIN_CONTAINER = "main";
+const TICKERS: Record<string, Ticker> = {};
 
 /* HELPERS */
+
+const boundIndex = (index: number, value: number, limit: number): number => {
+  if (index + value >= limit) {
+    return index + value - limit;
+  }
+  if (index + value < 0) {
+    return limit - index + value;
+  }
+
+  return index + value;
+};
 
 /* FUNCTIONS */
 export function showInfo() {
@@ -62,6 +76,9 @@ export function renderCells() {
     for (let j = 0; j < cellRow.length; j++) {
       const cell: Cell = cellRow[j];
 
+      // Check if cell needs to be updated
+      if (cell.updated) continue;
+
       // Retrieve main container and cell to update, create updated cell
       const container = APP.stage.getChildByLabel(LABEL_MAIN_CONTAINER);
       const cellOld = container?.getChildAt(cell.index);
@@ -75,6 +92,9 @@ export function renderCells() {
 
       // Replace old cell by new cell
       container?.replaceChild(cellOld, cellNew);
+
+      // Change update state of cell
+      cell.updated = true;
     }
   }
 }
@@ -122,8 +142,8 @@ export async function createApp() {
   }
 }
 
-export function addCellByIndex(index: number) {
-  // Mark the requested cell as alive so the next render pass replaces its Graphics.
+export function changeCellStateByIndex(index: number, state: CELL_STATE) {
+  // Mark the requested cell as specified state so the next render pass replaces its Graphics.
   for (let i = 0; i < CELLS.length; i++) {
     const cellRow = CELLS[i];
 
@@ -131,9 +151,65 @@ export function addCellByIndex(index: number) {
       const cell: Cell = cellRow[j];
 
       if (cell.index === index) {
-        cell.state = "alive";
+        cell.state = state;
         cell.updated = false;
       }
     }
   }
 }
+
+export function changeCellStateByMatrixIndexes(
+  i: number,
+  j: number,
+  state: CELL_STATE,
+) {
+  // Mark the requested cell as specified state so the next render pass replaces its Graphics.
+  if (CELLS.length === 0 || i >= CELLS.length || j >= CELLS[0].length) {
+    console.error("Couldn't change cell state with matrix indexes");
+    return;
+  }
+
+  const cell: Cell = CELLS[i][j];
+
+  cell.state = state;
+  cell.updated = false;
+}
+
+export function animationRightShift(action: ANIMATION_ACTION) {
+  const animate = () => {
+    for (let i = 0; i < CELLS.length; i++) {
+      const cellRow = CELLS[i];
+
+      for (let j = 0; j < cellRow.length; j++) {
+        const cell: Cell = cellRow[j];
+
+        if (cell.updated && cell.state === "alive") {
+          changeCellStateByMatrixIndexes(
+            i,
+            boundIndex(j, 1, cellRow.length),
+            "alive",
+          );
+          changeCellStateByIndex(cell.index, "dead");
+        }
+      }
+    }
+
+    renderCells();
+  };
+
+  if (action === "start") {
+    if (TICKERS.rightShift === undefined) {
+      TICKERS.rightShift = new Ticker();
+      TICKERS.rightShift.add(animate);
+    }
+    TICKERS.rightShift.start();
+  }
+  if (action === "stop" && TICKERS.rightShift !== undefined) {
+    TICKERS.rightShift.stop();
+  }
+  if (action === "destroy" && TICKERS.rightShift !== undefined) {
+    TICKERS.rightShift.destroy();
+  }
+}
+
+// TODO: simple animation, with run and stop buttons
