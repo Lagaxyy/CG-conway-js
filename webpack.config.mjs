@@ -19,7 +19,7 @@ export default (_env, argv) => {
     // Config for your testing server
     devServer: {
       compress: true,
-      allowedHosts: "all", // If you are using WebpackDevServer as your production server, please fix this line!
+      allowedHosts: ["localhost"], // Restrict allowed hosts to localhost to avoid exposing the dev server to untrusted hosts.
       static: false,
       client: {
         logging: "warn",
