@@ -99,7 +99,7 @@ export function renderCells() {
   }
 }
 
-export async function createApp() {
+export async function createAppCellGrid() {
   let cellsIndex = 0;
 
   // Retrieve pixi container div from the DOM
@@ -212,4 +212,8 @@ export function animationRightShift(action: ANIMATION_ACTION) {
   }
 }
 
-// TODO: simple animation, with run and stop buttons
+/**
+ * TODO:
+ *    - connect animation actions with buttons
+ *    - one of the exported functions should handle all the animations (with corresponding buttons ?)
+ */
