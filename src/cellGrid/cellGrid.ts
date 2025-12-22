@@ -117,19 +117,27 @@ class CellGrid {
    * @param state Desired state to apply to the matching cell.
    */
   changeCellStateByIndex(index: number, state: CELL_STATE) {
-    // Mark the requested cell as specified state so the next render pass replaces its Graphics.
-    for (let i = 0; i < this.#cells.length; i++) {
-      const cellRow = this.#cells[i];
-
-      for (let j = 0; j < cellRow.length; j++) {
-        const cell: Cell = cellRow[j];
-
-        if (cell.index === index) {
-          cell.state = state;
-          cell.updated = false;
-        }
-      }
+    // Guard against empty grid.
+    if (this.#cells.length === 0 || this.#cells[0].length === 0) {
+      console.error("Couldn't change cell state by index: grid is empty");
+      return;
     }
+
+    const cols = this.#cells[0].length;
+
+    // Compute row and column directly from the linear index.
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+
+    // Bounds check to avoid accessing outside the grid.
+    if (row < 0 || row >= this.#cells.length || col < 0 || col >= cols) {
+      console.error("Couldn't change cell state by index: index out of range");
+      return;
+    }
+
+    const cell: Cell = this.#cells[row][col];
+    cell.state = state;
+    cell.updated = false;
   }
 
   /**
