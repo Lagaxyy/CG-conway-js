@@ -1,18 +1,15 @@
 import { CellGrid } from "./cellGrid/cellGrid";
 
 const boundIndex = (index: number, value: number, limit: number): number => {
-  if (index + value >= limit) {
-    return index + value - limit;
-  }
   if (index + value < 0) {
-    return limit - index + value;
+    return limit - ((index + value) % limit);
   }
 
-  return index + value;
+  return (index + value) % limit;
 };
 
-async function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, 1000 * ms));
+async function sleep(s: number) {
+  return new Promise((resolve) => setTimeout(resolve, 1000 * s));
 }
 
 const animationRightShift = (grid: CellGrid) => {
@@ -38,6 +35,10 @@ const animationRightShift = (grid: CellGrid) => {
 
 const asyncScript = async () => {
   const grid = new CellGrid();
+  const simpleAnimation = {
+    name: "animationRightShift",
+    run: animationRightShift,
+  };
 
   await grid.init();
 
@@ -46,16 +47,16 @@ const asyncScript = async () => {
   grid.render();
 
   grid.changeCellStateByIndex(1, "alive");
-  grid.tickLoop("start", animationRightShift);
+  grid.tickLoop("start", simpleAnimation);
 
   await sleep(5);
-  grid.tickLoop("stop", animationRightShift);
+  grid.tickLoop("stop", simpleAnimation);
 
   await sleep(3);
-  grid.tickLoop("start", animationRightShift);
+  grid.tickLoop("start", simpleAnimation);
 
   await sleep(4);
-  grid.tickLoop("destroy", animationRightShift);
+  grid.tickLoop("destroy", simpleAnimation);
 };
 
 asyncScript();

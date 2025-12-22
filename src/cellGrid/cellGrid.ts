@@ -150,6 +150,8 @@ class CellGrid {
     // Mark the requested cell as specified state so the next render pass replaces its Graphics.
     if (
       this.#cells.length === 0 ||
+      i < 0 ||
+      j < 0 ||
       i >= this.#cells.length ||
       j >= this.#cells[0].length
     ) {
@@ -212,24 +214,29 @@ class CellGrid {
    * @param action Whether to start, stop, or destroy the ticker.
    * @param animation Function executed on each tick when the ticker runs.
    */
-  tickLoop(action: ANIMATION_ACTION, animation: (grid: CellGrid) => void) {
+  tickLoop(
+    action: ANIMATION_ACTION,
+    animation: { name: string; run: (grid: CellGrid) => void },
+  ) {
+    const tickerKey = animation.name;
+    const tickers = this.#tickers;
     const animate = () => {
       // It can handle time-dependent tasks if needed
-      animation(this);
+      animation.run(this);
     };
 
     if (action === "start") {
-      if (this.#tickers.rightShift === undefined) {
-        this.#tickers.rightShift = new Ticker();
-        this.#tickers.rightShift.add(animate);
+      if (tickers[tickerKey] === undefined) {
+        tickers[tickerKey] = new Ticker();
+        tickers[tickerKey].add(animate);
       }
-      this.#tickers.rightShift.start();
+      tickers[tickerKey].start();
     }
-    if (action === "stop" && this.#tickers.rightShift !== undefined) {
-      this.#tickers.rightShift.stop();
+    if (action === "stop" && tickers[tickerKey] !== undefined) {
+      tickers[tickerKey].stop();
     }
-    if (action === "destroy" && this.#tickers.rightShift !== undefined) {
-      this.#tickers.rightShift.destroy();
+    if (action === "destroy" && tickers[tickerKey] !== undefined) {
+      tickers[tickerKey].destroy();
     }
   }
 
