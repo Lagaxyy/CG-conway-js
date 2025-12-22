@@ -1,6 +1,7 @@
 /**
  * NOTES:
  *    - works best with 1600x800 div dimensions
+ *    - after adding logger here add checks for arguments and error handling
  */
 import {
   Application,
@@ -19,7 +20,7 @@ type ANIMATION_ACTION = "start" | "stop" | "destroy";
 interface Cell {
   index: number;
   state: CELL_STATE;
-  updated: boolean;
+  rendered: boolean;
 }
 
 /* GLOBALS */
@@ -101,7 +102,7 @@ class CellGrid {
         dc.y = i * CELL_SIZE;
 
         container.addChild(dc);
-        cellRow.push({ index: cellsIndex, state: "dead", updated: true });
+        cellRow.push({ index: cellsIndex, state: "dead", rendered: true });
         cellsIndex++;
       }
 
@@ -137,7 +138,7 @@ class CellGrid {
 
     const cell: Cell = this.#cells[row][col];
     cell.state = state;
-    cell.updated = false;
+    cell.rendered = false;
   }
 
   /**
@@ -162,7 +163,7 @@ class CellGrid {
     const cell: Cell = this.#cells[i][j];
 
     cell.state = state;
-    cell.updated = false;
+    cell.rendered = false;
   }
 
   /**
@@ -182,7 +183,7 @@ class CellGrid {
         const cell: Cell = cellRow[j];
 
         // Check if cell needs to be updated
-        if (cell.updated) continue;
+        if (cell.rendered) continue;
 
         // Retrieve main container and cell to update, create updated cell
         const container = this.#app.stage.getChildByLabel(LABEL_MAIN_CONTAINER);
@@ -204,7 +205,7 @@ class CellGrid {
         container.replaceChild(cellOld, cellNew);
 
         // Change update state of cell
-        cell.updated = true;
+        cell.rendered = true;
       }
     }
   }

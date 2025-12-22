@@ -2,7 +2,7 @@ import { CellGrid } from "./cellGrid/cellGrid";
 
 const boundIndex = (index: number, value: number, limit: number): number => {
   if (index + value < 0) {
-    return limit - ((index + value) % limit);
+    return (((index + value) % limit) + limit) % limit;
   }
 
   return (index + value) % limit;
@@ -19,7 +19,7 @@ const animationRightShift = (grid: CellGrid) => {
     for (let j = 0; j < cellRow.length; j++) {
       const cell = cellRow[j];
 
-      if (cell.updated && cell.state === "alive") {
+      if (cell.rendered && cell.state === "alive") {
         grid.changeCellStateByMatrixIndexes(
           i,
           boundIndex(j, 1, cellRow.length),
