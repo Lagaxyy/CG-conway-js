@@ -1,3 +1,7 @@
+/**
+ * NOTES:
+ *    - works best with 1600x800 div dimensions
+ */
 import {
   Application,
   Container,
@@ -39,17 +43,6 @@ const LABEL_MAIN_CONTAINER = "main";
 
 /* HELPERS */
 
-const boundIndex = (index: number, value: number, limit: number): number => {
-  if (index + value >= limit) {
-    return index + value - limit;
-  }
-  if (index + value < 0) {
-    return limit - index + value;
-  }
-
-  return index + value;
-};
-
 /* CLASS */
 
 class CellGrid {
@@ -59,10 +52,20 @@ class CellGrid {
 
   /* PUBLIC */
 
+  /**
+   * Initializes the CellGrid instance without mounting it to Pixi yet.
+   */
   constructor() {
     this.#app = undefined;
   }
 
+  get cells() {
+    return this.#cells;
+  }
+
+  /**
+   * Boots the Pixi application, inserts the canvas, and creates the initial dead grid.
+   */
   async init() {
     let cellsIndex = 0;
 
@@ -104,30 +107,58 @@ class CellGrid {
 
       this.#cells.push(cellRow);
     }
+
+    this.#showInfo();
   }
 
-  /* PRIVATE */
+  /**
+   * Modifies a cell's state by its linear index.
+   * @param index Global index used when the grid was populated.
+   * @param state Desired state to apply to the matching cell.
+   */
+  changeCellStateByIndex(index: number, state: CELL_STATE) {
+    // Mark the requested cell as specified state so the next render pass replaces its Graphics.
+    for (let i = 0; i < this.#cells.length; i++) {
+      const cellRow = this.#cells[i];
 
-  showInfo() {
-    if (this.#app === undefined) {
-      console.error("undefined app");
+      for (let j = 0; j < cellRow.length; j++) {
+        const cell: Cell = cellRow[j];
+
+        if (cell.index === index) {
+          cell.state = state;
+          cell.updated = false;
+        }
+      }
+    }
+  }
+
+  /**
+   * Modifies a cell's state by its matrix coordinates.
+   * @param i Row index of the cell.
+   * @param j Column index of the cell.
+   * @param state Target state for the cell.
+   */
+  changeCellStateByMatrixIndexes(i: number, j: number, state: CELL_STATE) {
+    // Mark the requested cell as specified state so the next render pass replaces its Graphics.
+    if (
+      this.#cells.length === 0 ||
+      i >= this.#cells.length ||
+      j >= this.#cells[0].length
+    ) {
+      console.error("Couldn't change cell state with matrix indexes");
       return;
     }
 
-    const width = this.#app.screen.width;
-    const height = this.#app.screen.height;
-    const pwidth = width / CELL_SIZE;
-    const pheight = height / CELL_SIZE;
+    const cell: Cell = this.#cells[i][j];
 
-    console.log(`cell size: ${CELL_SIZE}`);
-    console.log(`app screen width: ${width}`);
-    console.log(`app screen height: ${height}`);
-    console.log(`app screen pixel width: ${pwidth}`);
-    console.log(`app screen pixel height: ${pheight}`);
-    console.log(`total pixels: ${pwidth * pheight}`);
+    cell.state = state;
+    cell.updated = false;
   }
 
-  renderCells() {
+  /**
+   * Replaces the graphics for every "dirty" cell so the display matches their states.
+   */
+  render() {
     if (this.#app === undefined) {
       console.error("undefined app");
       return;
@@ -168,59 +199,15 @@ class CellGrid {
     }
   }
 
-  changeCellStateByIndex(index: number, state: CELL_STATE) {
-    // Mark the requested cell as specified state so the next render pass replaces its Graphics.
-    for (let i = 0; i < this.#cells.length; i++) {
-      const cellRow = this.#cells[i];
-
-      for (let j = 0; j < cellRow.length; j++) {
-        const cell: Cell = cellRow[j];
-
-        if (cell.index === index) {
-          cell.state = state;
-          cell.updated = false;
-        }
-      }
-    }
-  }
-
-  changeCellStateByMatrixIndexes(i: number, j: number, state: CELL_STATE) {
-    // Mark the requested cell as specified state so the next render pass replaces its Graphics.
-    if (
-      this.#cells.length === 0 ||
-      i >= this.#cells.length ||
-      j >= this.#cells[0].length
-    ) {
-      console.error("Couldn't change cell state with matrix indexes");
-      return;
-    }
-
-    const cell: Cell = this.#cells[i][j];
-
-    cell.state = state;
-    cell.updated = false;
-  }
-
-  animationRightShift(action: ANIMATION_ACTION) {
+  /**
+   * Controls a ticker that runs an animation callback on this grid.
+   * @param action Whether to start, stop, or destroy the ticker.
+   * @param animation Function executed on each tick when the ticker runs.
+   */
+  tickLoop(action: ANIMATION_ACTION, animation: (grid: CellGrid) => void) {
     const animate = () => {
-      for (let i = 0; i < this.#cells.length; i++) {
-        const cellRow = this.#cells[i];
-
-        for (let j = 0; j < cellRow.length; j++) {
-          const cell: Cell = cellRow[j];
-
-          if (cell.updated && cell.state === "alive") {
-            this.changeCellStateByMatrixIndexes(
-              i,
-              boundIndex(j, 1, cellRow.length),
-              "alive",
-            );
-            this.changeCellStateByIndex(cell.index, "dead");
-          }
-        }
-      }
-
-      this.renderCells();
+      // It can handle time-dependent tasks if needed
+      animation(this);
     };
 
     if (action === "start") {
@@ -237,12 +224,30 @@ class CellGrid {
       this.#tickers.rightShift.destroy();
     }
   }
+
+  /* PRIVATE */
+
+  /**
+   * Logs the current grid dimensions and calculated pixel counts for debugging.
+   */
+  #showInfo() {
+    if (this.#app === undefined) {
+      console.error("undefined app");
+      return;
+    }
+
+    const width = this.#app.screen.width;
+    const height = this.#app.screen.height;
+    const pwidth = width / CELL_SIZE;
+    const pheight = height / CELL_SIZE;
+
+    console.log(`cell size: ${CELL_SIZE}`);
+    console.log(`app screen width: ${width}`);
+    console.log(`app screen height: ${height}`);
+    console.log(`app screen pixel width: ${pwidth}`);
+    console.log(`app screen pixel height: ${pheight}`);
+    console.log(`total pixels: ${pwidth * pheight}`);
+  }
 }
 
 export { CellGrid };
-
-/**
- * TODO:
- *    - connect animation actions with buttons
- *    - one of the exported functions should handle all the animations (with corresponding buttons ?)
- */
