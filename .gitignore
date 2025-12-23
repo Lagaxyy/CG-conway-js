@@ -25,3 +25,6 @@ dist-ssr
 
 # local test files
 test.ts
+
+# js files
+*.js
