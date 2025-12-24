@@ -5,23 +5,36 @@
  */
 
 /* TS */
+import * as FS from "fs";
 
-type Level = "trace" | "debug" | "warn" | "error";
+type Level = "info" | "debug" | "warn" | "error";
 
 interface Counter {
-  trace: number;
+  info: number;
   debug: number;
   warn: number;
   error: number;
 }
 
+/* GLOBALS */
+
+const tagLevelColors = {
+  info: "\x1b[1;39m",
+  debug: "\x1b[1;32m",
+  warn: "\x1b[1;33m",
+  error: "\x1b[1;31m",
+  reset: "\x1b[0m",
+};
+
+/* CLASS */
+
 class GuacaLog {
   static #instance: GuacaLog | undefined = undefined;
   static #instantiatedByClass: boolean = true;
 
-  #logFilename: string | undefined;
+  #logFileDescriptor: number | undefined;
   #counter: Counter = {
-    trace: 0,
+    info: 0,
     debug: 0,
     warn: 0,
     error: 0,
@@ -34,7 +47,21 @@ class GuacaLog {
       );
     }
 
-    this.#logFilename = filename;
+    if (filename !== undefined) {
+      const now = new Date();
+      const formattedNow = new Intl.DateTimeFormat("fr", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      FS.writeFileSync(
+        filename,
+        `Logger initialized (${formattedNow.format(now)})\n`,
+      );
+      this.#logFileDescriptor = FS.openSync(filename, "a");
+    }
   }
 
   static getInstance(filename: string | undefined = undefined): GuacaLog {
@@ -48,6 +75,7 @@ class GuacaLog {
   }
 
   log(level: Level, message: string | object) {
+    let logMessage = "placeholder";
     const now = new Date();
     const formattedNow = new Intl.DateTimeFormat("fr", {
       hour: "2-digit",
@@ -56,38 +84,57 @@ class GuacaLog {
     });
     const url = import.meta.url;
     const sourcePath = url.substring(url.lastIndexOf("src/"));
+    const spacing = "  ";
+
+    const tagLevel = `[${level.toUpperCase()}]${spacing}`;
+    const tagDate = `(${formattedNow.format(now)})${spacing}`;
+    const tagFileSource = `(${sourcePath})`;
 
     if (typeof message === "string") {
-      console.log(
-        `[${level.toUpperCase()}] (${formattedNow.format(now)}) (${sourcePath}) - ${message}`,
-      );
+      logMessage = `${spacing}-${spacing}${message}`;
     }
     if (typeof message === "object") {
-      console.log(
-        `[${level.toUpperCase()}] (${formattedNow.format(now)}) (${sourcePath})`,
-      );
-      console.log(JSON.stringify(message, null, 2));
+      logMessage = `\n${JSON.stringify(message, null, 2)}`;
     }
+
+    const loggedToConsole = `${tagLevelColors[level]}${tagLevel}${tagLevelColors.reset}${tagDate}${tagFileSource}${logMessage}`;
+    const loggedToFile = `${tagLevel}${tagDate}${tagFileSource}${logMessage}`;
+
+    if (this.#logFileDescriptor !== undefined) {
+      FS.writeFileSync(this.#logFileDescriptor, loggedToFile + "\n", {
+        flag: "a",
+      });
+    }
+    console.log(loggedToConsole);
     this.#counter[level]++;
   }
 
   counts() {
-    console.log("trace: ", this.#counter.trace);
-    console.log("debug: ", this.#counter.debug);
-    console.log("warn: ", this.#counter.warn);
-    console.log("error: ", this.#counter.error);
+    this.log("info", `${this.#counter.info} log(s) tagged with info`);
+    this.log("info", `${this.#counter.debug} log(s) tagged with debug`);
+    this.log("info", `${this.#counter.warn} log(s) tagged with warn`);
+    this.log("info", `${this.#counter.error} log(s) tagged with error`);
+  }
 
-    console.log(this.#logFilename);
+  close() {
+    this.counts();
+
+    if (this.#logFileDescriptor !== undefined) {
+      FS.closeSync(this.#logFileDescriptor);
+    }
+
+    GuacaLog.#instance = undefined;
   }
 }
 
 export { GuacaLog };
 
-const test = GuacaLog.getInstance();
+const test = GuacaLog.getInstance("cgconway.log");
 test.log("debug", "test message");
 test.log("debug", { message: "another test message", value: 2 });
+test.log("error", "test with error tag");
 
 const instance = GuacaLog.getInstance();
 instance.log("debug", "test with instance");
 
-test.counts();
+test.close();
