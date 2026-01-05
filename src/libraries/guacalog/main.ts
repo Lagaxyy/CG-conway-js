@@ -1,9 +1,3 @@
-/**
- * TODO:
- *    - add color to level tags
- *    - log to file if specified
- */
-
 /* TS */
 import * as FS from "fs";
 
@@ -28,6 +22,10 @@ const tagLevelColors = {
 
 /* CLASS */
 
+/**
+ * Singleton logger that writes colorized console output and optionally persists logs to a file,
+ * tracking counts per level for post-mortem reporting.
+ */
 class GuacaLog {
   static #instance: GuacaLog | undefined = undefined;
   static #instantiatedByClass: boolean = true;
@@ -40,6 +38,10 @@ class GuacaLog {
     error: 0,
   };
 
+  /**
+   * Guarded constructor that only executes through the method `getInstance`.
+   * @param filename Optional path to persist logs to.
+   */
   constructor(filename: string | undefined = undefined) {
     if (GuacaLog.#instantiatedByClass) {
       throw new Error(
@@ -64,6 +66,10 @@ class GuacaLog {
     }
   }
 
+  /**
+   * Returns the shared logger instance, creating it if necessary.
+   * @param filename Optional log file path that is only honored on first call.
+   */
   static getInstance(filename: string | undefined = undefined): GuacaLog {
     GuacaLog.#instantiatedByClass = false;
     if (GuacaLog.#instance === undefined) {
@@ -74,6 +80,11 @@ class GuacaLog {
     return GuacaLog.#instance;
   }
 
+  /**
+   * Records a log entry to the console (with color) and optional file output.
+   * @param level Severity level that controls formatting and counter tracking.
+   * @param message Message payload which can be a string or structured object.
+   */
   log(level: Level, message: string | object) {
     let logMessage = "placeholder";
     const now = new Date();
@@ -109,6 +120,9 @@ class GuacaLog {
     this.#counter[level]++;
   }
 
+  /**
+   * Emits the aggregated counters for each log level.
+   */
   counts() {
     this.log("info", `${this.#counter.info} log(s) tagged with info`);
     this.log("info", `${this.#counter.debug} log(s) tagged with debug`);
@@ -116,6 +130,9 @@ class GuacaLog {
     this.log("info", `${this.#counter.error} log(s) tagged with error`);
   }
 
+  /**
+   * Flushes the counters, closes the file descriptor, and resets the singleton.
+   */
   close() {
     this.counts();
 
@@ -128,13 +145,3 @@ class GuacaLog {
 }
 
 export { GuacaLog };
-
-const test = GuacaLog.getInstance("cgconway.log");
-test.log("debug", "test message");
-test.log("debug", { message: "another test message", value: 2 });
-test.log("error", "test with error tag");
-
-const instance = GuacaLog.getInstance();
-instance.log("debug", "test with instance");
-
-test.close();
