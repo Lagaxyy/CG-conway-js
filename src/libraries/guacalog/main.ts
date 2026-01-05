@@ -57,11 +57,9 @@ class GuacaLog {
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
-      });
-      FS.writeFileSync(
-        filename,
-        `Logger initialized (${formattedNow.format(now)})\n`,
-      );
+      }).format(now);
+
+      FS.writeFileSync(filename, `Logger initialized (${formattedNow})\n`);
       this.#logFileDescriptor = FS.openSync(filename, "a");
     }
   }
@@ -82,23 +80,23 @@ class GuacaLog {
 
   /**
    * Records a log entry to the console (with color) and optional file output.
+   * @param url The file URL of the caller
    * @param level Severity level that controls formatting and counter tracking.
    * @param message Message payload which can be a string or structured object.
    */
-  log(level: Level, message: string | object) {
-    let logMessage = "placeholder";
+  log(url: string, level: Level, message: string | object) {
+    let logMessage = "";
     const now = new Date();
     const formattedNow = new Intl.DateTimeFormat("fr", {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-    });
-    const url = import.meta.url;
+    }).format(now);
     const sourcePath = url.substring(url.lastIndexOf("src/"));
     const spacing = "  ";
 
     const tagLevel = `[${level.toUpperCase()}]${spacing}`;
-    const tagDate = `(${formattedNow.format(now)})${spacing}`;
+    const tagDate = `(${formattedNow})${spacing}`;
     const tagFileSource = `(${sourcePath})`;
 
     if (typeof message === "string") {
@@ -124,10 +122,22 @@ class GuacaLog {
    * Emits the aggregated counters for each log level.
    */
   counts() {
-    this.log("info", `${this.#counter.info} log(s) tagged with info`);
-    this.log("info", `${this.#counter.debug} log(s) tagged with debug`);
-    this.log("info", `${this.#counter.warn} log(s) tagged with warn`);
-    this.log("info", `${this.#counter.error} log(s) tagged with error`);
+    const messages = [
+      `${this.#counter.info} log(s) tagged with info`,
+      `${this.#counter.debug} log(s) tagged with debug`,
+      `${this.#counter.warn} log(s) tagged with warn`,
+      `${this.#counter.error} log(s) tagged with error`,
+    ];
+
+    for (const message of messages) {
+      // Write to console without affecting counters
+      console.log(message);
+
+      // Mirror the output to the log file, if one is open
+      if (this.#logFileDescriptor !== undefined) {
+        FS.writeSync(this.#logFileDescriptor, message + "\n");
+      }
+    }
   }
 
   /**
