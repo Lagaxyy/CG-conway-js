@@ -1,16 +1,22 @@
 {
-  "name": "CG-conway-js",
+  "name": "cgconway",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "npm run dev",
-    "build": "npm run lint && webpack --mode=production",
     "lint": "eslint .",
-    "dev": "webpack serve --mode=development"
+    "server": "node dist/node/node-bundle.cjs",
+    "build": "npm run lint && webpack --mode=production",
+    "start": "npm run build && npm run server",
+    "dev-server": "webpack --mode=development --config=webpack.config.mjs && npm run server",
+    "dev-web": "webpack serve --mode=development"
   },
   "dependencies": {
-    "pixi.js": "^8.8.1"
+    "async_hooks": "^1.0.0",
+    "net": "^1.0.2",
+    "node-polyfill-webpack-plugin": "^4.1.0",
+    "pixi.js": "^8.8.1",
+    "webpack-merge": "^6.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
@@ -19,6 +25,7 @@
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.1.2",
     "eslint-plugin-prettier": "^5.2.6",
+    "fs": "^0.0.1-security",
     "html-webpack-plugin": "^5.6.3",
     "prettier": "^3.5.3",
     "terser-webpack-plugin": "^5.3.12",

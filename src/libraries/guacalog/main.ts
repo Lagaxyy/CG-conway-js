@@ -1,5 +1,6 @@
-/* TS */
 import * as FS from "fs";
+
+/* TS */
 
 type Level = "info" | "debug" | "warn" | "error";
 
@@ -154,4 +155,4 @@ class GuacaLog {
   }
 }
 
-export { GuacaLog };
+export default GuacaLog;

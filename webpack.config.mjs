@@ -2,16 +2,21 @@ import path from "path";
 
 import CopyPlugin from "copy-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
-import TerserPlugin from "terser-webpack-plugin";
+import NodePolyfillPlugin from "node-polyfill-webpack-plugin";
+import { merge } from "webpack-merge"
+
+import common from "./webpack.common.mjs"
 
 export default (_env, argv) => {
-  return {
+  return [
+  merge(common(_env, argv), {
+    context: path.resolve(process.cwd(), "src/client"),
     stats: "minimal", // Keep console output easy to read.
-    entry: "./src/main.ts", // Your program entry point
+    entry: "./index.ts",
 
     // Your build destination
     output: {
-      path: path.resolve(process.cwd(), "dist"),
+      path: path.resolve(process.cwd(), "dist", "browser"),
       filename: "bundle.js",
       clean: true,
     },
@@ -33,52 +38,34 @@ export default (_env, argv) => {
       host: "localhost",
     },
 
-    // Web games are bigger than pages, disable the warnings that our game is too big.
-    performance: { hints: false },
-
-    // Enable sourcemaps while debugging
-    devtool: argv.mode === "development" ? "eval-source-map" : undefined,
-
-    // Minify the code when making a final build
-    optimization: {
-      minimize: argv.mode === "production",
-      minimizer: [
-        new TerserPlugin({
-          terserOptions: {
-            ecma: 6,
-            compress: { drop_console: true },
-            output: { comments: false, beautify: false },
-          },
-        }),
-      ],
-    },
-
-    // Explain webpack how to do Typescript
-    module: {
-      rules: [
-        {
-          test: /\.ts(x)?$/,
-          loader: "ts-loader",
-          exclude: /node_modules/,
-        },
-      ],
-    },
-    resolve: {
-      extensions: [".tsx", ".ts", ".js"],
-    },
-
     plugins: [
       // Copy our static assets to the final build
       new CopyPlugin({
-        patterns: [{ from: "public/" }],
+        patterns: [{ from: path.resolve(process.cwd(), "public/") }],
       }),
 
       // Make an index.html from the template
       new HtmlWebpackPlugin({
-        template: "./index.ejs",
+        template: path.resolve(process.cwd(), "index.ejs"),
         hash: true,
         minify: false,
       }),
+
+      new NodePolyfillPlugin(),
     ],
-  };
+  }),
+  merge(common(_env, argv), {
+    context: path.resolve(process.cwd(), "src/server"),
+    entry: './main.ts',
+    target: 'node',
+    output: {
+      filename: 'node-bundle.cjs',
+      path: path.resolve(process.cwd(), "dist", "node"),
+      clean: true,
+      library: {
+        type: "commonjs-static"
+      }
+    },
+  })
+]
 };
