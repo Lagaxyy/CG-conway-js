@@ -1,4 +1,13 @@
-import { CellGrid } from "./cellGrid/cellGrid";
+import CellGrid from "./cellGrid/cellGrid";
+import sleep from "../libraries/sleep/main";
+
+/* TS */
+
+interface WaitingCell {
+  i: number;
+  j: number;
+  state: string;
+}
 
 /* GLOBALS */
 
@@ -12,30 +21,26 @@ const boundIndex = (index: number, value: number, limit: number): number => {
   return (index + value) % limit;
 };
 
-async function sleep(s: number) {
-  return new Promise((resolve) => setTimeout(resolve, 1000 * s));
-}
+// const animationRightShift = (grid: CellGrid) => {
+//   for (let i = 0; i < grid.cells.length; i++) {
+//     const cellRow = grid.cells[i];
 
-const animationRightShift = (grid: CellGrid) => {
-  for (let i = 0; i < grid.cells.length; i++) {
-    const cellRow = grid.cells[i];
+//     for (let j = 0; j < cellRow.length; j++) {
+//       const cell = cellRow[j];
 
-    for (let j = 0; j < cellRow.length; j++) {
-      const cell = cellRow[j];
+//       if (cell.rendered && cell.state === "alive") {
+//         grid.changeCellStateByMatrixIndexes(
+//           i,
+//           boundIndex(j, 1, cellRow.length),
+//           "alive",
+//         );
+//         grid.changeCellStateByIndex(cell.index, "dead");
+//       }
+//     }
+//   }
 
-      if (cell.rendered && cell.state === "alive") {
-        grid.changeCellStateByMatrixIndexes(
-          i,
-          boundIndex(j, 1, cellRow.length),
-          "alive",
-        );
-        grid.changeCellStateByIndex(cell.index, "dead");
-      }
-    }
-  }
-
-  grid.render();
-};
+//   grid.render();
+// };
 
 /* SCRIPT */
 
@@ -53,35 +58,130 @@ document.getElementById("button-test")?.addEventListener("click", async () => {
   }
 });
 
-const asyncScript = async () => {
-  const simpleAnimation = {
-    name: "animationRightShift",
-    run: animationRightShift,
+const gameOfLife = async (grid: CellGrid) => {
+  const isStateAndRendered = (
+    grid: CellGrid,
+    i: number,
+    j: number,
+    state: string,
+  ) => {
+    // DEVNOTES: since we store updates in an array, checking rendered isn't required
+    return grid.cells[i][j].state == state && grid.cells[i][j].rendered;
   };
-  const a1 = 5;
-  const a2 = 2047;
-  const a3 = 1;
+  const adjacentCells = (
+    grid: CellGrid,
+    i: number,
+    j: number,
+    state: string,
+  ) => {
+    let countAlive = 0;
+    const limitRows = grid.cells.length;
+    const limitColumns = grid.cells[0].length;
+
+    // Left
+    if (isStateAndRendered(grid, i, boundIndex(j, -1, limitColumns), state))
+      countAlive++;
+    // Right
+    if (isStateAndRendered(grid, i, boundIndex(j, 1, limitColumns), state))
+      countAlive++;
+    // Top
+    if (isStateAndRendered(grid, boundIndex(i, -1, limitRows), j, state))
+      countAlive++;
+    // Bottom
+    if (isStateAndRendered(grid, boundIndex(i, 1, limitRows), j, state))
+      countAlive++;
+    // Top left
+    if (
+      isStateAndRendered(
+        grid,
+        boundIndex(i, -1, limitRows),
+        boundIndex(j, -1, limitColumns),
+        state,
+      )
+    )
+      countAlive++;
+    // Top right
+    if (
+      isStateAndRendered(
+        grid,
+        boundIndex(i, -1, limitRows),
+        boundIndex(j, 1, limitColumns),
+        state,
+      )
+    )
+      countAlive++;
+    // Bottom left
+    if (
+      isStateAndRendered(
+        grid,
+        boundIndex(i, 1, limitRows),
+        boundIndex(j, -1, limitColumns),
+        state,
+      )
+    )
+      countAlive++;
+    // Bottom right
+    if (
+      isStateAndRendered(
+        grid,
+        boundIndex(i, 1, limitRows),
+        boundIndex(j, 1, limitColumns),
+        state,
+      )
+    )
+      countAlive++;
+
+    return countAlive;
+  };
+
+  const waitingCells = Array<WaitingCell>();
+
+  for (let i = 0; i < grid.cells.length; i++) {
+    for (let j = 0; j < grid.cells[0].length; j++) {
+      const adjacentAliveCells = adjacentCells(grid, i, j, "alive");
+
+      // Rules of Game of Life
+      if (grid.cells[i][j].state == "alive") {
+        if (adjacentAliveCells != 2 && adjacentAliveCells != 3)
+          waitingCells.push({ i: i, j: j, state: "dead" });
+      } else {
+        if (adjacentAliveCells == 3)
+          waitingCells.push({ i: i, j: j, state: "alive" });
+      }
+    }
+  }
+
+  for (const cell of waitingCells) {
+    if (cell.state !== "alive" && cell.state !== "dead")
+      throw Error("Wrong cell state indicated");
+    grid.changeCellStateByMatrixIndexes(cell.i, cell.j, cell.state);
+  }
+
+  grid.render();
+};
+
+const asyncScript = async () => {
+  const animationGameOfLife = {
+    name: "animationGameOfLife",
+    run: gameOfLife,
+  };
 
   const grid = new CellGrid();
 
   await grid.init();
 
-  grid.changeCellStateByIndex(a1, "alive");
-  grid.changeCellStateByIndex(a2, "alive");
+  grid.changeCellStateByMatrixIndexes(5, 3, "alive");
+  grid.changeCellStateByMatrixIndexes(5, 4, "alive");
+  grid.changeCellStateByMatrixIndexes(5, 5, "alive");
+  grid.changeCellStateByMatrixIndexes(4, 5, "alive");
+  grid.changeCellStateByMatrixIndexes(3, 4, "alive");
   grid.render();
 
-  grid.changeCellStateByIndex(a3, "alive");
+  await sleep(2);
 
-  grid.tickLoop("start", simpleAnimation);
-  await sleep(5);
-
-  grid.tickLoop("stop", simpleAnimation);
-  await sleep(3);
-
-  grid.tickLoop("start", simpleAnimation);
-  await sleep(4);
-
-  grid.tickLoop("destroy", simpleAnimation);
+  grid.tickLoop("start", animationGameOfLife);
+  await sleep(20);
+  grid.tickLoop("destroy", animationGameOfLife);
 };
 
 asyncScript();
