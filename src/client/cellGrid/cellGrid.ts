@@ -219,11 +219,17 @@ class CellGrid {
     action: ANIMATION_ACTION,
     animation: { name: string; run: (grid: CellGrid) => void },
   ) {
+    let delta = 0;
     const tickerKey = animation.name;
     const tickers = this.#tickers;
-    const animate = () => {
-      // It can handle time-dependent tasks if needed
-      animation.run(this);
+    const animate = (ticker: Ticker) => {
+      // Handle the speed of the animation
+      if (delta > 500) {
+        animation.run(this);
+        delta = 0;
+      } else {
+        delta += ticker.deltaMS;
+      }
     };
 
     if (action === "start") {
@@ -267,4 +273,4 @@ class CellGrid {
   }
 }
 
-export { CellGrid };
+export default CellGrid;
