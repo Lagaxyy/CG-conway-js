@@ -38,6 +38,15 @@ body {
     height: 100%;
 }
 
+#buttons {
+    display: flex;
+    justify-content: space-around;
+}
+
+.spacing {
+    height: 50px;
+}
+
 h1 {
     text-align: center;
 }

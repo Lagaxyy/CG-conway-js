@@ -1,5 +1,5 @@
 import CellGrid from "./cellGrid/cellGrid";
-import sleep from "../libraries/sleep/main";
+import Patterns from "../../patterns.json";
 
 /* TS */
 
@@ -11,6 +11,13 @@ interface WaitingCell {
 
 /* GLOBALS */
 
+const PATTERNS = [
+  Patterns.spaceship.glider,
+  Patterns.spaceship.lwss,
+  Patterns.oscillator.pulsar,
+];
+let currentPattern = 0;
+
 /* HELPERS */
 
 const boundIndex = (index: number, value: number, limit: number): number => {
@@ -20,27 +27,6 @@ const boundIndex = (index: number, value: number, limit: number): number => {
 
   return (index + value) % limit;
 };
-
-// const animationRightShift = (grid: CellGrid) => {
-//   for (let i = 0; i < grid.cells.length; i++) {
-//     const cellRow = grid.cells[i];
-
-//     for (let j = 0; j < cellRow.length; j++) {
-//       const cell = cellRow[j];
-
-//       if (cell.rendered && cell.state === "alive") {
-//         grid.changeCellStateByMatrixIndexes(
-//           i,
-//           boundIndex(j, 1, cellRow.length),
-//           "alive",
-//         );
-//         grid.changeCellStateByIndex(cell.index, "dead");
-//       }
-//     }
-//   }
-
-//   grid.render();
-// };
 
 /* SCRIPT */
 
@@ -160,28 +146,58 @@ const gameOfLife = (grid: CellGrid) => {
   grid.render();
 };
 
-const asyncScript = async () => {
-  const animationGameOfLife = {
-    name: "animationGameOfLife",
-    run: gameOfLife,
-  };
-
-  const grid = new CellGrid();
-
-  await grid.init();
-
-  grid.changeCellStateByMatrixIndexes(5, 3, "alive");
-  grid.changeCellStateByMatrixIndexes(5, 4, "alive");
-  grid.changeCellStateByMatrixIndexes(5, 5, "alive");
-  grid.changeCellStateByMatrixIndexes(4, 5, "alive");
-  grid.changeCellStateByMatrixIndexes(3, 4, "alive");
-  grid.render();
-
-  await sleep(2);
-
-  grid.tickLoop("start", animationGameOfLife);
-  await sleep(20);
-  grid.tickLoop("destroy", animationGameOfLife);
+const patternApply = (patternCells: Array<{ i: number; j: number }>) => {
+  for (const cell of patternCells) {
+    grid.changeCellStateByMatrixIndexes(cell.i, cell.j, "alive");
+  }
 };
 
-asyncScript();
+const patternClean = () => {
+  const limitRows = grid.cells.length;
+  const limitColumns = grid.cells[0].length;
+
+  for (let i = 0; i < limitRows; i++) {
+    for (let j = 0; j < limitColumns; j++) {
+      if (grid.cells[i][j].state == "alive") {
+        grid.changeCellStateByMatrixIndexes(i, j, "dead");
+      }
+    }
+  }
+};
+
+const animationGameOfLife = {
+  name: "animationGameOfLife",
+  run: gameOfLife,
+};
+
+const grid = new CellGrid();
+await grid.init();
+
+patternApply(PATTERNS[currentPattern]);
+grid.render();
+
+document.getElementById("button-start")?.addEventListener("click", () => {
+  grid.tickLoop("start", animationGameOfLife);
+});
+
+document.getElementById("button-stop")?.addEventListener("click", () => {
+  grid.tickLoop("stop", animationGameOfLife);
+});
+
+document.getElementById("button-speed-up")?.addEventListener("click", () => {
+  grid.speedMultiplier = grid.speedMultiplier * 2;
+});
+
+document.getElementById("button-slow-down")?.addEventListener("click", () => {
+  grid.speedMultiplier = grid.speedMultiplier / 2;
+});
+
+document
+  .getElementById("button-switch-pattern")
+  ?.addEventListener("click", () => {
+    patternClean();
+    grid.tickLoop("destroy", animationGameOfLife);
+    currentPattern = boundIndex(currentPattern, 1, PATTERNS.length);
+    patternApply(PATTERNS[currentPattern]);
+    grid.render();
+  });
