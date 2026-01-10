@@ -58,7 +58,7 @@ document.getElementById("button-test")?.addEventListener("click", async () => {
   }
 });
 
-const gameOfLife = async (grid: CellGrid) => {
+const gameOfLife = (grid: CellGrid) => {
   const isStateAndRendered = (
     grid: CellGrid,
     i: number,
