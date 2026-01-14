@@ -43,7 +43,7 @@ body {
     justify-content: space-around;
 }
 
-#infos{
+#infos {
     display: flex;
     justify-content: space-around;
     align-items: center;

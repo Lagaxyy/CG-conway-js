@@ -1,4 +1,6 @@
 import express from "express";
+import dotenv from "dotenv";
+
 import GuacaLog from "../libraries/guacalog/main";
 
 const logger = GuacaLog.getInstance("cgconway.log");
@@ -17,14 +19,22 @@ const request = (res: express.Response, exec: () => void) => {
   }
 };
 
+dotenv.config({ path: "secret.env" });
+const secretKey = process.env.SECRET_KEY;
+
+if (secretKey == undefined) {
+  throw Error("No secret key defined.");
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.static("./dist/browser"));
 
-app.get("/test", (_, res) =>
+app.post("/log", (req, res) =>
   request(res, () => {
-    logger.log(import.meta.url, "info", "Test endpoint requested");
-    res.json({ success: true });
+    logger.log(import.meta.url, "debug", req.body);
+    logger.log(import.meta.url, "debug", secretKey);
+    res.status(200).send({ success: "true" });
   }),
 );
 

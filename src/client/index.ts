@@ -6,7 +6,7 @@ import Patterns from "../../patterns.json";
 interface WaitingCell {
   i: number;
   j: number;
-  state: string;
+  state: "alive" | "dead";
 }
 
 /* GLOBALS */
@@ -124,8 +124,6 @@ const gameOfLife = (grid: CellGrid) => {
   }
 
   for (const cell of waitingCells) {
-    if (cell.state !== "alive" && cell.state !== "dead")
-      throw Error("Wrong cell state indicated");
     grid.changeCellStateByMatrixIndexes(cell.i, cell.j, cell.state);
   }
 
