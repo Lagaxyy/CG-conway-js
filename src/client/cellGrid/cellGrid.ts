@@ -25,6 +25,7 @@ interface Cell {
 
 /* GLOBALS */
 
+const BASE_SPEED_VALUE = 500;
 const CELL_SIZE = 25;
 const CELL_COLOR_LIGHT = 0x525252;
 const CELL_COLOR_DARK = 0x28282b;
@@ -50,6 +51,7 @@ class CellGrid {
   #app: Application<Renderer> | undefined;
   #cells: Array<Cell>[] = [];
   #tickers: Record<string, Ticker> = {};
+  #speedMultiplier: number = 1;
 
   /* PUBLIC */
 
@@ -62,6 +64,14 @@ class CellGrid {
 
   get cells(): ReadonlyArray<ReadonlyArray<Readonly<Cell>>> {
     return this.#cells;
+  }
+
+  get speedMultiplier(): number {
+    return this.#speedMultiplier;
+  }
+
+  set speedMultiplier(value: number) {
+    this.#speedMultiplier = value;
   }
 
   /**
@@ -219,11 +229,17 @@ class CellGrid {
     action: ANIMATION_ACTION,
     animation: { name: string; run: (grid: CellGrid) => void },
   ) {
+    let delta = 0;
     const tickerKey = animation.name;
     const tickers = this.#tickers;
-    const animate = () => {
-      // It can handle time-dependent tasks if needed
-      animation.run(this);
+    const animate = (ticker: Ticker) => {
+      // Handle the speed of the animation
+      if (delta > BASE_SPEED_VALUE * (1 / this.#speedMultiplier)) {
+        animation.run(this);
+        delta = 0;
+      } else {
+        delta += ticker.deltaMS;
+      }
     };
 
     if (action === "start") {
@@ -267,4 +283,4 @@ class CellGrid {
   }
 }
 
-export { CellGrid };
+export default CellGrid;

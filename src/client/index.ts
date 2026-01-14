@@ -1,6 +1,22 @@
-import { CellGrid } from "./cellGrid/cellGrid";
+import CellGrid from "./cellGrid/cellGrid";
+import Patterns from "../../patterns.json";
+
+/* TS */
+
+interface WaitingCell {
+  i: number;
+  j: number;
+  state: "alive" | "dead";
+}
 
 /* GLOBALS */
+
+const PATTERNS = [
+  Patterns.spaceship.glider,
+  Patterns.spaceship.lwss,
+  Patterns.oscillator.pulsar,
+];
+let currentPattern = 0;
 
 /* HELPERS */
 
@@ -12,76 +28,178 @@ const boundIndex = (index: number, value: number, limit: number): number => {
   return (index + value) % limit;
 };
 
-async function sleep(s: number) {
-  return new Promise((resolve) => setTimeout(resolve, 1000 * s));
-}
+/* SCRIPT */
 
-const animationRightShift = (grid: CellGrid) => {
+const gameOfLife = (grid: CellGrid) => {
+  const isStateAndRendered = (
+    grid: CellGrid,
+    i: number,
+    j: number,
+    state: string,
+  ) => {
+    // DEVNOTES: since we store updates in an array, checking rendered isn't required
+    return grid.cells[i][j].state == state && grid.cells[i][j].rendered;
+  };
+  const adjacentCells = (
+    grid: CellGrid,
+    i: number,
+    j: number,
+    state: string,
+  ) => {
+    let countAlive = 0;
+    const limitRows = grid.cells.length;
+    const limitColumns = grid.cells[0].length;
+
+    // Left
+    if (isStateAndRendered(grid, i, boundIndex(j, -1, limitColumns), state))
+      countAlive++;
+    // Right
+    if (isStateAndRendered(grid, i, boundIndex(j, 1, limitColumns), state))
+      countAlive++;
+    // Top
+    if (isStateAndRendered(grid, boundIndex(i, -1, limitRows), j, state))
+      countAlive++;
+    // Bottom
+    if (isStateAndRendered(grid, boundIndex(i, 1, limitRows), j, state))
+      countAlive++;
+    // Top left
+    if (
+      isStateAndRendered(
+        grid,
+        boundIndex(i, -1, limitRows),
+        boundIndex(j, -1, limitColumns),
+        state,
+      )
+    )
+      countAlive++;
+    // Top right
+    if (
+      isStateAndRendered(
+        grid,
+        boundIndex(i, -1, limitRows),
+        boundIndex(j, 1, limitColumns),
+        state,
+      )
+    )
+      countAlive++;
+    // Bottom left
+    if (
+      isStateAndRendered(
+        grid,
+        boundIndex(i, 1, limitRows),
+        boundIndex(j, -1, limitColumns),
+        state,
+      )
+    )
+      countAlive++;
+    // Bottom right
+    if (
+      isStateAndRendered(
+        grid,
+        boundIndex(i, 1, limitRows),
+        boundIndex(j, 1, limitColumns),
+        state,
+      )
+    )
+      countAlive++;
+
+    return countAlive;
+  };
+
+  const waitingCells = Array<WaitingCell>();
+
   for (let i = 0; i < grid.cells.length; i++) {
-    const cellRow = grid.cells[i];
+    for (let j = 0; j < grid.cells[0].length; j++) {
+      const adjacentAliveCells = adjacentCells(grid, i, j, "alive");
 
-    for (let j = 0; j < cellRow.length; j++) {
-      const cell = cellRow[j];
-
-      if (cell.rendered && cell.state === "alive") {
-        grid.changeCellStateByMatrixIndexes(
-          i,
-          boundIndex(j, 1, cellRow.length),
-          "alive",
-        );
-        grid.changeCellStateByIndex(cell.index, "dead");
+      // Rules of Game of Life
+      if (grid.cells[i][j].state == "alive") {
+        if (adjacentAliveCells != 2 && adjacentAliveCells != 3)
+          waitingCells.push({ i: i, j: j, state: "dead" });
+      } else {
+        if (adjacentAliveCells == 3)
+          waitingCells.push({ i: i, j: j, state: "alive" });
       }
     }
   }
 
+  for (const cell of waitingCells) {
+    grid.changeCellStateByMatrixIndexes(cell.i, cell.j, cell.state);
+  }
+
   grid.render();
 };
 
-/* SCRIPT */
-
-document.getElementById("button-test")?.addEventListener("click", async () => {
-  try {
-    const response = await fetch("/test");
-    const data = await response.json();
-    const result = document.getElementById("result");
-
-    if (result !== null) {
-      result.textContent = "Result: " + JSON.stringify(data);
-    }
-  } catch (e) {
-    console.error(e);
+const patternApply = (pattern: {
+  name: string;
+  cells: Array<{ i: number; j: number }>;
+}) => {
+  for (const cell of pattern.cells) {
+    grid.changeCellStateByMatrixIndexes(cell.i, cell.j, "alive");
   }
+
+  const infoNamePattern = document.getElementById("info-name-pattern");
+
+  if (infoNamePattern !== null)
+    infoNamePattern.textContent = `Structure: ${pattern.name}`;
+};
+
+const patternClean = () => {
+  const limitRows = grid.cells.length;
+  const limitColumns = grid.cells[0].length;
+
+  for (let i = 0; i < limitRows; i++) {
+    for (let j = 0; j < limitColumns; j++) {
+      if (grid.cells[i][j].state == "alive") {
+        grid.changeCellStateByMatrixIndexes(i, j, "dead");
+      }
+    }
+  }
+};
+
+const animationGameOfLife = {
+  name: "animationGameOfLife",
+  run: gameOfLife,
+};
+
+const grid = new CellGrid();
+await grid.init();
+
+patternApply(PATTERNS[currentPattern]);
+grid.render();
+
+document.getElementById("button-start")?.addEventListener("click", () => {
+  grid.tickLoop("start", animationGameOfLife);
 });
 
-const asyncScript = async () => {
-  const simpleAnimation = {
-    name: "animationRightShift",
-    run: animationRightShift,
-  };
-  const a1 = 5;
-  const a2 = 2047;
-  const a3 = 1;
+document.getElementById("button-stop")?.addEventListener("click", () => {
+  grid.tickLoop("stop", animationGameOfLife);
+});
 
-  const grid = new CellGrid();
+document.getElementById("button-speed-up")?.addEventListener("click", () => {
+  const infoSpeedMult = document.getElementById("info-speed-multiplier");
 
-  await grid.init();
+  grid.speedMultiplier = grid.speedMultiplier * 2;
 
-  grid.changeCellStateByIndex(a1, "alive");
-  grid.changeCellStateByIndex(a2, "alive");
-  grid.render();
+  if (infoSpeedMult !== null)
+    infoSpeedMult.textContent = `Speed Multiplier: ${grid.speedMultiplier}x`;
+});
 
-  grid.changeCellStateByIndex(a3, "alive");
+document.getElementById("button-slow-down")?.addEventListener("click", () => {
+  const infoSpeedMult = document.getElementById("info-speed-multiplier");
 
-  grid.tickLoop("start", simpleAnimation);
-  await sleep(5);
+  grid.speedMultiplier = grid.speedMultiplier / 2;
 
-  grid.tickLoop("stop", simpleAnimation);
-  await sleep(3);
+  if (infoSpeedMult !== null)
+    infoSpeedMult.textContent = `Speed Multiplier: ${grid.speedMultiplier}x`;
+});
 
-  grid.tickLoop("start", simpleAnimation);
-  await sleep(4);
-
-  grid.tickLoop("destroy", simpleAnimation);
-};
-
-asyncScript();
+document
+  .getElementById("button-switch-pattern")
+  ?.addEventListener("click", () => {
+    patternClean();
+    grid.tickLoop("destroy", animationGameOfLife);
+    currentPattern = boundIndex(currentPattern, 1, PATTERNS.length);
+    patternApply(PATTERNS[currentPattern]);
+    grid.render();
+  });
