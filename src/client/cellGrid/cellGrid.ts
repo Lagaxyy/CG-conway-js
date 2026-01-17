@@ -46,40 +46,43 @@ const LABEL_MAIN_CONTAINER = "main";
 /* HELPERS */
 
 const interactive = (event: MouseEvent, div: HTMLElement, grid: CellGrid) => {
-  const limit_min_x = div.getBoundingClientRect().left;
-  const limit_max_x = div.getBoundingClientRect().right;
-  const limit_min_y = div.getBoundingClientRect().top;
-  const limit_max_y = div.getBoundingClientRect().bottom;
+  const rect = div.getBoundingClientRect();
+  const limitMinX = rect.left;
+  const limitMaxX = rect.right;
+  const limitMinY = rect.top;
+  const limitMaxY = rect.bottom;
 
   if (
-    event.clientX < Math.floor(limit_min_x) ||
-    event.clientX > Math.ceil(limit_max_x) ||
-    event.clientY < Math.floor(limit_min_y) ||
-    event.clientY > Math.ceil(limit_max_y)
+    event.clientX < Math.floor(limitMinX) ||
+    event.clientX > Math.ceil(limitMaxX) ||
+    event.clientY < Math.floor(limitMinY) ||
+    event.clientY > Math.ceil(limitMaxY)
   )
     return;
 
   const limitRows = grid.cells.length; // same as grid.height / CELL_SIZE
   const limitColumns = grid.cells[0].length; // same as grid.width / CELL_SIZE
 
-  for (let i = 0; i < limitRows; i++) {
-    for (let j = 0; j < limitColumns; j++) {
-      if (
-        event.clientX >= div.getBoundingClientRect().left + j * CELL_SIZE &&
-        event.clientX <=
-          div.getBoundingClientRect().left + (j + 1) * CELL_SIZE &&
-        event.clientY >= div.getBoundingClientRect().top + i * CELL_SIZE &&
-        event.clientY <= div.getBoundingClientRect().top + (i + 1) * CELL_SIZE
-      ) {
-        grid.changeCellStateByMatrixIndexes(
-          i,
-          j,
-          grid.cells[i][j].state == "alive" ? "dead" : "alive",
-        );
-        grid.render();
-      }
-    }
-  }
+  const computedX = event.clientX - rect.left;
+  const computedY = event.clientY - rect.top;
+
+  const computedI = Math.floor(computedY / CELL_SIZE);
+  const computedJ = Math.floor(computedX / CELL_SIZE);
+
+  if (
+    computedI < 0 ||
+    computedI > limitRows ||
+    computedJ < 0 ||
+    computedJ > limitColumns
+  )
+    return;
+
+  grid.changeCellStateByMatrixIndexes(
+    computedI,
+    computedJ,
+    grid.cells[computedI][computedJ].state === "alive" ? "dead" : "alive",
+  );
+  grid.render();
 };
 
 /* CLASS */
@@ -301,28 +304,6 @@ class CellGrid {
   }
 
   /* PRIVATE */
-
-  /**
-   * Logs the current grid dimensions and calculated pixel counts for debugging.
-   */
-  // #showInfo() {
-  //   if (this.#app === undefined) {
-  //     console.error("undefined app");
-  //     return;
-  //   }
-
-  //   const width = this.#app.screen.width;
-  //   const height = this.#app.screen.height;
-  //   const pwidth = width / CELL_SIZE;
-  //   const pheight = height / CELL_SIZE;
-
-  //   console.log(`cell size: ${CELL_SIZE}`);
-  //   console.log(`app screen width: ${width}`);
-  //   console.log(`app screen height: ${height}`);
-  //   console.log(`app screen pixel width: ${pwidth}`);
-  //   console.log(`app screen pixel height: ${pheight}`);
-  //   console.log(`total pixels: ${pwidth * pheight}`);
-  // }
 }
 
 export default CellGrid;
