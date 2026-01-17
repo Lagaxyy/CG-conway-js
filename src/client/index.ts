@@ -1,5 +1,5 @@
 import CellGrid from "./cellGrid/cellGrid";
-import Patterns from "../../patterns.json";
+import Patterns from "../../public/patterns.json";
 
 /* TS */
 
@@ -12,6 +12,7 @@ interface WaitingCell {
 /* GLOBALS */
 
 const PATTERNS = [
+  Patterns.blank,
   Patterns.spaceship.glider,
   Patterns.spaceship.lwss,
   Patterns.oscillator.pulsar,
@@ -130,7 +131,7 @@ const gameOfLife = (grid: CellGrid) => {
   grid.render();
 };
 
-const patternApply = (pattern: {
+const applyPatternToCanvas = (pattern: {
   name: string;
   cells: Array<{ i: number; j: number }>;
 }) => {
@@ -144,7 +145,7 @@ const patternApply = (pattern: {
     infoNamePattern.textContent = `Structure: ${pattern.name}`;
 };
 
-const patternClean = () => {
+const cleanCanvas = () => {
   const limitRows = grid.cells.length;
   const limitColumns = grid.cells[0].length;
 
@@ -165,7 +166,7 @@ const animationGameOfLife = {
 const grid = new CellGrid();
 await grid.init();
 
-patternApply(PATTERNS[currentPattern]);
+applyPatternToCanvas(PATTERNS[currentPattern]);
 grid.render();
 
 document.getElementById("button-start")?.addEventListener("click", () => {
@@ -197,9 +198,9 @@ document.getElementById("button-slow-down")?.addEventListener("click", () => {
 document
   .getElementById("button-switch-pattern")
   ?.addEventListener("click", () => {
-    patternClean();
+    cleanCanvas();
     grid.tickLoop("destroy", animationGameOfLife);
     currentPattern = boundIndex(currentPattern, 1, PATTERNS.length);
-    patternApply(PATTERNS[currentPattern]);
+    applyPatternToCanvas(PATTERNS[currentPattern]);
     grid.render();
   });
