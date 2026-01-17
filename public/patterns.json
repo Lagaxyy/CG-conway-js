@@ -1,4 +1,8 @@
 {
+  "blank": {
+    "name": "Blank canvas",
+    "cells": []
+  },
   "oscillator": {
     "pulsar": {
       "name": "Pulsar (period 3)",

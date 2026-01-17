@@ -12,6 +12,7 @@ interface WaitingCell {
 /* GLOBALS */
 
 const PATTERNS = [
+  Patterns.blank,
   Patterns.spaceship.glider,
   Patterns.spaceship.lwss,
   Patterns.oscillator.pulsar,

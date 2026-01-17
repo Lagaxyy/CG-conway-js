@@ -45,6 +45,43 @@ const LABEL_MAIN_CONTAINER = "main";
 
 /* HELPERS */
 
+const interactive = (event: MouseEvent, div: HTMLElement, grid: CellGrid) => {
+  const limit_min_x = div.getBoundingClientRect().left;
+  const limit_max_x = div.getBoundingClientRect().right;
+  const limit_min_y = div.getBoundingClientRect().top;
+  const limit_max_y = div.getBoundingClientRect().bottom;
+
+  if (
+    event.clientX < Math.floor(limit_min_x) ||
+    event.clientX > Math.ceil(limit_max_x) ||
+    event.clientY < Math.floor(limit_min_y) ||
+    event.clientY > Math.ceil(limit_max_y)
+  )
+    return;
+
+  const limitRows = grid.cells.length; // same as grid.height / CELL_SIZE
+  const limitColumns = grid.cells[0].length; // same as grid.width / CELL_SIZE
+
+  for (let i = 0; i < limitRows; i++) {
+    for (let j = 0; j < limitColumns; j++) {
+      if (
+        event.clientX >= div.getBoundingClientRect().left + j * CELL_SIZE &&
+        event.clientX <=
+          div.getBoundingClientRect().left + (j + 1) * CELL_SIZE &&
+        event.clientY >= div.getBoundingClientRect().top + i * CELL_SIZE &&
+        event.clientY <= div.getBoundingClientRect().top + (i + 1) * CELL_SIZE
+      ) {
+        grid.changeCellStateByMatrixIndexes(
+          i,
+          j,
+          grid.cells[i][j].state == "alive" ? "dead" : "alive",
+        );
+        grid.render();
+      }
+    }
+  }
+};
+
 /* CLASS */
 
 class CellGrid {
@@ -60,6 +97,16 @@ class CellGrid {
    */
   constructor() {
     this.#app = undefined;
+  }
+
+  get width(): number {
+    if (this.#app === undefined) throw Error("App undefined");
+    return this.#app.screen.width;
+  }
+
+  get height(): number {
+    if (this.#app === undefined) throw Error("App undefined");
+    return this.#app.screen.height;
   }
 
   get cells(): ReadonlyArray<ReadonlyArray<Readonly<Cell>>> {
@@ -80,7 +127,6 @@ class CellGrid {
   async init() {
     let cellsIndex = 0;
 
-    // Retrieve pixi container div from the DOM
     const pixiContainer = document.getElementById("pixi-container");
     if (pixiContainer === null) {
       // TEMP ERROR HANDLING
@@ -88,20 +134,14 @@ class CellGrid {
       return;
     }
 
-    // Create a new application
     this.#app = new Application();
-
-    // Initialize the application
     await this.#app.init({ background: "#000000", resizeTo: pixiContainer });
-
-    // Append the application canvas to the document body
     pixiContainer.appendChild(this.#app.canvas);
 
-    // Create the main container that will host the entire cell grid.
     const container = new Container({ label: LABEL_MAIN_CONTAINER });
     this.#app.stage.addChild(container);
 
-    // Populate the container with a uniform grid of dead cells and track each as a Cell.
+    // Populate the container with a uniform grid of dead cells and track each as a Cell
     for (let i = 0; i < this.#app.screen.height / CELL_SIZE; i++) {
       const cellRow: Cell[] = [];
 
@@ -119,7 +159,9 @@ class CellGrid {
       this.#cells.push(cellRow);
     }
 
-    this.#showInfo();
+    document.addEventListener("click", (event) =>
+      interactive(event, pixiContainer, this),
+    );
   }
 
   /**
@@ -263,24 +305,24 @@ class CellGrid {
   /**
    * Logs the current grid dimensions and calculated pixel counts for debugging.
    */
-  #showInfo() {
-    if (this.#app === undefined) {
-      console.error("undefined app");
-      return;
-    }
+  // #showInfo() {
+  //   if (this.#app === undefined) {
+  //     console.error("undefined app");
+  //     return;
+  //   }
 
-    const width = this.#app.screen.width;
-    const height = this.#app.screen.height;
-    const pwidth = width / CELL_SIZE;
-    const pheight = height / CELL_SIZE;
+  //   const width = this.#app.screen.width;
+  //   const height = this.#app.screen.height;
+  //   const pwidth = width / CELL_SIZE;
+  //   const pheight = height / CELL_SIZE;
 
-    console.log(`cell size: ${CELL_SIZE}`);
-    console.log(`app screen width: ${width}`);
-    console.log(`app screen height: ${height}`);
-    console.log(`app screen pixel width: ${pwidth}`);
-    console.log(`app screen pixel height: ${pheight}`);
-    console.log(`total pixels: ${pwidth * pheight}`);
-  }
+  //   console.log(`cell size: ${CELL_SIZE}`);
+  //   console.log(`app screen width: ${width}`);
+  //   console.log(`app screen height: ${height}`);
+  //   console.log(`app screen pixel width: ${pwidth}`);
+  //   console.log(`app screen pixel height: ${pheight}`);
+  //   console.log(`total pixels: ${pwidth * pheight}`);
+  // }
 }
 
 export default CellGrid;
