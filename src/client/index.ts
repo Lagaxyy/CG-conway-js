@@ -9,15 +9,18 @@ interface WaitingCell {
   state: "alive" | "dead";
 }
 
+interface Pattern {
+  name: string;
+  cells: Array<{ i: number; j: number }>;
+}
+
 /* GLOBALS */
 
 const PATTERNS = [
-  Patterns.blank,
   Patterns.spaceship.glider,
   Patterns.spaceship.lwss,
   Patterns.oscillator.pulsar,
 ];
-let currentPattern = 0;
 
 /* HELPERS */
 
@@ -27,6 +30,36 @@ const boundIndex = (index: number, value: number, limit: number): number => {
   }
 
   return (index + value) % limit;
+};
+
+const applyPatternToCanvas = (pattern: Pattern) => {
+  for (const cell of pattern.cells) {
+    grid.changeCellStateByMatrixIndexes(cell.i, cell.j, "alive");
+  }
+
+  const infoNamePattern = document.getElementById("info-name-pattern");
+
+  if (infoNamePattern !== null)
+    infoNamePattern.textContent = `Current pattern: ${pattern.name}`;
+};
+
+const cleanCanvas = () => {
+  const limitRows = grid.cells.length;
+  const limitColumns = grid.cells[0].length;
+
+  for (let i = 0; i < limitRows; i++) {
+    for (let j = 0; j < limitColumns; j++) {
+      if (grid.cells[i][j].state == "alive") {
+        grid.changeCellStateByMatrixIndexes(i, j, "dead");
+      }
+    }
+  }
+};
+
+const resetCanvas = () => {
+  cleanCanvas();
+  grid.tickLoop("destroy", animationGameOfLife);
+  toggle = "stop";
 };
 
 /* SCRIPT */
@@ -131,33 +164,7 @@ const gameOfLife = (grid: CellGrid) => {
   grid.render();
 };
 
-const applyPatternToCanvas = (pattern: {
-  name: string;
-  cells: Array<{ i: number; j: number }>;
-}) => {
-  for (const cell of pattern.cells) {
-    grid.changeCellStateByMatrixIndexes(cell.i, cell.j, "alive");
-  }
-
-  const infoNamePattern = document.getElementById("info-name-pattern");
-
-  if (infoNamePattern !== null)
-    infoNamePattern.textContent = `Structure: ${pattern.name}`;
-};
-
-const cleanCanvas = () => {
-  const limitRows = grid.cells.length;
-  const limitColumns = grid.cells[0].length;
-
-  for (let i = 0; i < limitRows; i++) {
-    for (let j = 0; j < limitColumns; j++) {
-      if (grid.cells[i][j].state == "alive") {
-        grid.changeCellStateByMatrixIndexes(i, j, "dead");
-      }
-    }
-  }
-};
-
+let toggle: "start" | "stop" = "stop";
 const animationGameOfLife = {
   name: "animationGameOfLife",
   run: gameOfLife,
@@ -166,15 +173,20 @@ const animationGameOfLife = {
 const grid = new CellGrid();
 await grid.init();
 
-applyPatternToCanvas(PATTERNS[currentPattern]);
+applyPatternToCanvas({ name: "Blank canvas", cells: [] });
 grid.render();
 
-document.getElementById("button-start")?.addEventListener("click", () => {
-  grid.tickLoop("start", animationGameOfLife);
-});
-
-document.getElementById("button-stop")?.addEventListener("click", () => {
-  grid.tickLoop("stop", animationGameOfLife);
+// Buttons
+document.getElementById("button-toggle")?.addEventListener("click", () => {
+  if (toggle === "stop") {
+    grid.tickLoop("start", animationGameOfLife);
+    toggle = "start";
+  } else if (toggle === "start") {
+    grid.tickLoop("stop", animationGameOfLife);
+    toggle = "stop";
+  } else {
+    throw Error("Unknown toggle.");
+  }
 });
 
 document.getElementById("button-speed-up")?.addEventListener("click", () => {
@@ -196,11 +208,39 @@ document.getElementById("button-slow-down")?.addEventListener("click", () => {
 });
 
 document
-  .getElementById("button-switch-pattern")
+  .getElementById("button-clean-canvas")
   ?.addEventListener("click", () => {
-    cleanCanvas();
-    grid.tickLoop("destroy", animationGameOfLife);
-    currentPattern = boundIndex(currentPattern, 1, PATTERNS.length);
-    applyPatternToCanvas(PATTERNS[currentPattern]);
+    resetCanvas();
+    applyPatternToCanvas({ name: "Blank canvas", cells: [] });
     grid.render();
   });
+
+// Canvas handler
+const patterns = PATTERNS;
+
+const listOfPatterns = document.getElementById("patterns-list");
+
+if (listOfPatterns === null) {
+  throw Error("No list of patterns <ul> found.");
+}
+
+for (const pattern of patterns) {
+  const element = document.createElement("li");
+  const content = document.createElement("span");
+  const buttonApply = document.createElement("button");
+
+  content.textContent = pattern.name;
+
+  buttonApply.className = "patterns-list-button-apply";
+  buttonApply.addEventListener("click", () => {
+    resetCanvas();
+    applyPatternToCanvas(pattern);
+    grid.render();
+  });
+  buttonApply.textContent = "Apply";
+
+  element.appendChild(content);
+  element.appendChild(buttonApply);
+
+  listOfPatterns.appendChild(element);
+}
