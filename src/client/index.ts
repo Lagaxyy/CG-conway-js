@@ -11,7 +11,7 @@ interface WaitingCell {
 
 interface Pattern {
   name: string;
-  cells: Array<{ i: number; j: number }>;
+  canvas: string;
 }
 
 /* GLOBALS */
@@ -33,9 +33,8 @@ const boundIndex = (index: number, value: number, limit: number): number => {
 };
 
 const applyPatternToCanvas = (pattern: Pattern) => {
-  for (const cell of pattern.cells) {
-    grid.changeCellStateByMatrixIndexes(cell.i, cell.j, "alive");
-  }
+  grid.decompress(pattern.canvas);
+  grid.render();
 
   const infoNamePattern = document.getElementById("info-name-pattern");
 
@@ -43,23 +42,49 @@ const applyPatternToCanvas = (pattern: Pattern) => {
     infoNamePattern.textContent = `Current pattern: ${pattern.name}`;
 };
 
-const cleanCanvas = () => {
-  const limitRows = grid.cells.length;
-  const limitColumns = grid.cells[0].length;
+const resetCanvas = () => {
+  grid.clean();
+  grid.tickLoop("destroy", animationGameOfLife);
+  toggle = "stop";
+};
 
-  for (let i = 0; i < limitRows; i++) {
-    for (let j = 0; j < limitColumns; j++) {
-      if (grid.cells[i][j].state == "alive") {
-        grid.changeCellStateByMatrixIndexes(i, j, "dead");
-      }
-    }
+const writeListOfPatterns = () => {
+  const patterns = getPatterns();
+
+  const listOfPatterns = document.getElementById("patterns-list");
+
+  if (listOfPatterns === null) {
+    throw Error("No list of patterns <ul> found.");
+  }
+
+  for (const pattern of patterns) {
+    const element = document.createElement("li");
+    const content = document.createElement("span");
+    const buttonApply = document.createElement("button");
+
+    content.textContent = pattern.name;
+
+    buttonApply.className = "patterns-list-button-apply";
+    buttonApply.addEventListener("click", () => {
+      resetCanvas();
+      applyPatternToCanvas(pattern);
+      grid.render();
+    });
+    buttonApply.textContent = "Apply";
+
+    element.appendChild(content);
+    element.appendChild(buttonApply);
+
+    listOfPatterns.appendChild(element);
   }
 };
 
-const resetCanvas = () => {
-  cleanCanvas();
-  grid.tickLoop("destroy", animationGameOfLife);
-  toggle = "stop";
+const getPatterns = (filter: string | undefined = undefined) => {
+  if (filter === undefined) {
+    return PATTERNS;
+  }
+
+  return PATTERNS;
 };
 
 /* SCRIPT */
@@ -173,7 +198,7 @@ const animationGameOfLife = {
 const grid = new CellGrid();
 await grid.init();
 
-applyPatternToCanvas({ name: "Blank canvas", cells: [] });
+applyPatternToCanvas({ name: "Blank canvas", canvas: "" });
 grid.render();
 
 // Buttons
@@ -207,40 +232,24 @@ document.getElementById("button-slow-down")?.addEventListener("click", () => {
     infoSpeedMult.textContent = `Speed Multiplier: ${grid.speedMultiplier}x`;
 });
 
+// const buttonDebug = document.createElement("button");
+// buttonDebug.className = "button";
+// buttonDebug.textContent = "Debug";
+// buttonDebug.addEventListener("click", () => {
+//   grid.decompress(
+//     "A4OIcmhLzvX1O6QqgiFEQUcEyB239mV9b9YHhlisWDijj0o0wrNeEqr81xqI60USUXYp0qnVhn0b3d+DuQb9hVDtFwlpvhcaTCq1dC8mVD4DQ1cCMmT+773b9SYrFXkvcNBAXY23k4lGx26ni9MdjbhOE94BWtLwRPVAImLbD3UYh0T8f/4PPpOjQN/nQVi5DVNy3fdagr5K2yRdtQRrAvkfwFCpKzqD6RFK+Xz9dWZ0bSFH27uqh0OTwbreTaqiyfd4qjnZg8pF6g33uJZrZNhXjasJZIaKRrSsoqpWTNUaO73IH8BSfgqeXmoU5DminA1jk87HGdefxnSphVAB1Q==",
+//   );
+//   grid.render();
+// });
+// document.getElementById("buttons")?.appendChild(buttonDebug);
+
 document
   .getElementById("button-clean-canvas")
   ?.addEventListener("click", () => {
     resetCanvas();
-    applyPatternToCanvas({ name: "Blank canvas", cells: [] });
+    applyPatternToCanvas({ name: "Blank canvas", canvas: "" });
     grid.render();
   });
 
 // Canvas handler
-const patterns = PATTERNS;
-
-const listOfPatterns = document.getElementById("patterns-list");
-
-if (listOfPatterns === null) {
-  throw Error("No list of patterns <ul> found.");
-}
-
-for (const pattern of patterns) {
-  const element = document.createElement("li");
-  const content = document.createElement("span");
-  const buttonApply = document.createElement("button");
-
-  content.textContent = pattern.name;
-
-  buttonApply.className = "patterns-list-button-apply";
-  buttonApply.addEventListener("click", () => {
-    resetCanvas();
-    applyPatternToCanvas(pattern);
-    grid.render();
-  });
-  buttonApply.textContent = "Apply";
-
-  element.appendChild(content);
-  element.appendChild(buttonApply);
-
-  listOfPatterns.appendChild(element);
-}
+writeListOfPatterns();
