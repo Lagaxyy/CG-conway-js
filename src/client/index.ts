@@ -16,6 +16,7 @@ interface Pattern {
 
 /* GLOBALS */
 
+let TOGGLE: "start" | "stop" = "stop";
 const PATTERNS = [
   Patterns.spaceship.glider,
   Patterns.spaceship.lwss,
@@ -34,7 +35,6 @@ const boundIndex = (index: number, value: number, limit: number): number => {
 
 const applyPatternToCanvas = (pattern: Pattern) => {
   grid.decompress(pattern.canvas);
-  grid.render();
 
   const infoNamePattern = document.getElementById("info-name-pattern");
 
@@ -45,7 +45,7 @@ const applyPatternToCanvas = (pattern: Pattern) => {
 const resetCanvas = () => {
   grid.clean();
   grid.tickLoop("destroy", animationGameOfLife);
-  toggle = "stop";
+  TOGGLE = "stop";
 };
 
 const writeListOfPatterns = () => {
@@ -189,7 +189,6 @@ const gameOfLife = (grid: CellGrid) => {
   grid.render();
 };
 
-let toggle: "start" | "stop" = "stop";
 const animationGameOfLife = {
   name: "animationGameOfLife",
   run: gameOfLife,
@@ -203,14 +202,12 @@ grid.render();
 
 // Buttons
 document.getElementById("button-toggle")?.addEventListener("click", () => {
-  if (toggle === "stop") {
+  if (TOGGLE === "stop") {
     grid.tickLoop("start", animationGameOfLife);
-    toggle = "start";
-  } else if (toggle === "start") {
+    TOGGLE = "start";
+  } else if (TOGGLE === "start") {
     grid.tickLoop("stop", animationGameOfLife);
-    toggle = "stop";
-  } else {
-    throw Error("Unknown toggle.");
+    TOGGLE = "stop";
   }
 });
 
@@ -240,16 +237,18 @@ document
     );
 
     if (patternsInput !== null) {
+      resetCanvas();
       applyPatternToCanvas({
         name: "Imported Canvas",
         canvas: patternsInput.value ?? "",
       });
+      grid.render();
     }
   });
 
 document
   .getElementById("patterns-export-button")
-  ?.addEventListener("click", () => {
+  ?.addEventListener("click", async () => {
     const exportDisplayContent = document.getElementById(
       "patterns-export-content",
     );
@@ -266,7 +265,12 @@ document
         "style",
         "display: inherit; text-align: center;",
       );
-      navigator.clipboard.writeText(compressed);
+
+      try {
+        await navigator.clipboard.writeText(compressed);
+      } catch (e) {
+        console.error(e);
+      }
     }
   });
 
