@@ -1,5 +1,5 @@
 [build]
-functions="src/netlify/functions/production"
+functions="src/netlify/functions"
 
 [[redirects]]
 from="/api/*"
