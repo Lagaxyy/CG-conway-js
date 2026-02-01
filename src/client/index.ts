@@ -1,5 +1,4 @@
 import CellGrid from "./cellGrid/cellGrid";
-import Patterns from "../../public/patterns.json";
 
 /* TS */
 
@@ -10,18 +9,18 @@ interface WaitingCell {
 }
 
 interface Pattern {
+  id: number;
+  data: string;
   name: string;
   canvas: string;
+  popularity: number;
+  tag: number;
+  created_at: string;
 }
 
 /* GLOBALS */
 
 let TOGGLE: "start" | "stop" = "stop";
-const PATTERNS = [
-  Patterns.spaceship.glider,
-  Patterns.spaceship.lwss,
-  Patterns.oscillator.pulsar,
-];
 
 /* HELPERS */
 
@@ -33,13 +32,13 @@ const boundIndex = (index: number, value: number, limit: number): number => {
   return (index + value) % limit;
 };
 
-const applyPatternToCanvas = (pattern: Pattern) => {
-  grid.decompress(pattern.canvas);
+const applyPatternToCanvas = (name: string, data: string) => {
+  grid.decompress(data);
 
   const infoNamePattern = document.getElementById("info-name-pattern");
 
   if (infoNamePattern !== null)
-    infoNamePattern.textContent = `Current pattern: ${pattern.name}`;
+    infoNamePattern.textContent = `Current pattern: ${name}`;
 };
 
 const resetCanvas = () => {
@@ -48,14 +47,31 @@ const resetCanvas = () => {
   TOGGLE = "stop";
 };
 
-const writeListOfPatterns = () => {
-  const patterns = getPatterns();
+const getPatterns = async (filter: string | undefined = undefined) => {
+  let result = undefined;
 
+  if (filter !== undefined) {
+    result = await fetch(`/api/getCanvas?search=${filter}`, {
+      method: "GET",
+    });
+  } else {
+    result = await fetch("/api/getCanvas", {
+      method: "GET",
+    });
+  }
+
+  return result.json();
+};
+
+const writeListOfPatterns = async (filter: string | undefined = undefined) => {
   const listOfPatterns = document.getElementById("patterns-list");
 
   if (listOfPatterns === null) {
     throw Error("No list of patterns <ul> found.");
   }
+
+  const response = await getPatterns(filter);
+  const patterns: Array<Pattern> = response.rows;
 
   for (const pattern of patterns) {
     const element = document.createElement("li");
@@ -67,7 +83,7 @@ const writeListOfPatterns = () => {
     buttonApply.className = "patterns-list-button-apply";
     buttonApply.addEventListener("click", () => {
       resetCanvas();
-      applyPatternToCanvas(pattern);
+      applyPatternToCanvas(pattern.name, pattern.data);
       grid.render();
     });
     buttonApply.textContent = "Apply";
@@ -78,16 +94,6 @@ const writeListOfPatterns = () => {
     listOfPatterns.appendChild(element);
   }
 };
-
-const getPatterns = (filter: string | undefined = undefined) => {
-  if (filter === undefined) {
-    return PATTERNS;
-  }
-
-  return PATTERNS;
-};
-
-/* SCRIPT */
 
 const gameOfLife = (grid: CellGrid) => {
   const isStateAndRendered = (
@@ -189,6 +195,8 @@ const gameOfLife = (grid: CellGrid) => {
   grid.render();
 };
 
+/* SCRIPT */
+
 const animationGameOfLife = {
   name: "animationGameOfLife",
   run: gameOfLife,
@@ -197,7 +205,7 @@ const animationGameOfLife = {
 const grid = new CellGrid();
 await grid.init();
 
-applyPatternToCanvas({ name: "Blank canvas", canvas: "" });
+applyPatternToCanvas("Blank Canvas", "");
 grid.render();
 
 // Buttons
@@ -238,10 +246,7 @@ document
 
     if (patternsInput !== null) {
       resetCanvas();
-      applyPatternToCanvas({
-        name: "Imported Canvas",
-        canvas: patternsInput.value ?? "",
-      });
+      applyPatternToCanvas("Imported Canvas", patternsInput.value ?? "");
       grid.render();
     }
   });
@@ -289,8 +294,36 @@ document
   .getElementById("button-clean-canvas")
   ?.addEventListener("click", () => {
     resetCanvas();
-    applyPatternToCanvas({ name: "Blank canvas", canvas: "" });
+    applyPatternToCanvas("Blank canvas", "");
     grid.render();
+  });
+
+document
+  .getElementById("patterns-search-button")
+  ?.addEventListener("click", () => {
+    const listOfPatterns = document.getElementById("patterns-list");
+
+    if (listOfPatterns === null) {
+      throw Error("No list of patterns <ul> found.");
+    }
+
+    while (listOfPatterns.lastElementChild) {
+      listOfPatterns.removeChild(listOfPatterns.lastElementChild);
+    }
+
+    const searchInput = <HTMLInputElement>(
+      document.getElementById("patterns-search-input")
+    );
+
+    if (searchInput === null) {
+      throw Error("No list of patterns <ul> found.");
+    }
+
+    if (searchInput.value.length === 0) {
+      writeListOfPatterns();
+    } else {
+      writeListOfPatterns(searchInput.value);
+    }
   });
 
 // Canvas handler

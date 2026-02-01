@@ -23,7 +23,7 @@ export default async (request: Request) => {
       logger.log(
         import.meta.url,
         "info",
-        `Received /add ${request.method} request !`,
+        `Received /addCanvas ${request.method} request !`,
       );
     }
 
